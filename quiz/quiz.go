@@ -29,13 +29,12 @@ func main() {
 	file, err := os.Open(fullPath)
 	check(err)
 
-	fmt.Print("Ready? [y] ")
 	inputReader := bufio.NewScanner(os.Stdin)
-	for inputReader.Scan() {
-		if inputReader.Text() == "y" {
+
+	for {
+		fmt.Print("Ready? [y] ")
+		if inputReader.Scan(); inputReader.Text() == "y" {
 			break
-		} else {
-			fmt.Print("Ready? [y] ")
 		}
 	}
 
@@ -56,17 +55,14 @@ problemsLoop:
 		inputCh := make(chan string, 1)
 
 		go func(quiz string) {
-			fmt.Printf("%s >> ", quiz)
-			for inputReader.Scan() {
-				input := strings.Trim(inputReader.Text(), " ")
-
-				if input != "" {
-					inputCh <- input
-					return
-				}
-
-				// no input, ask again
+			for {
 				fmt.Printf("%s >> ", quiz)
+				if inputReader.Scan() {
+					if input := strings.Trim(inputReader.Text(), " "); input != "" {
+						inputCh <- input
+						return
+					}
+				}
 			}
 		}(quiz)
 
