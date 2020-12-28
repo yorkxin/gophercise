@@ -29,6 +29,16 @@ func main() {
 	file, err := os.Open(fullPath)
 	check(err)
 
+	fmt.Print("Ready? [y] ")
+	inputReader := bufio.NewScanner(os.Stdin)
+	for inputReader.Scan() {
+		if inputReader.Text() == "y" {
+			break
+		} else {
+			fmt.Print("Ready? [y] ")
+		}
+	}
+
 	csvReader := csv.NewReader(file)
 	timer := time.NewTimer(time.Duration(*limitPtr) * time.Second)
 
@@ -54,7 +64,6 @@ problemsLoop:
 		inputCh := make(chan string, 1)
 
 		go func() {
-			inputReader := bufio.NewScanner(os.Stdin)
 			if inputReader.Scan() {
 				inputCh <- inputReader.Text()
 			}
