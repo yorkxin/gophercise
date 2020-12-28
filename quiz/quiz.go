@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -52,15 +53,22 @@ problemsLoop:
 		quiz := record[0]
 		ans := record[1]
 
-		fmt.Printf("%s >> ", quiz)
-
 		inputCh := make(chan string, 1)
 
-		go func() {
-			if inputReader.Scan() {
-				inputCh <- inputReader.Text()
+		go func(quiz string) {
+			fmt.Printf("%s >> ", quiz)
+			for inputReader.Scan() {
+				input := strings.Trim(inputReader.Text(), " ")
+
+				if input != "" {
+					inputCh <- input
+					return
+				}
+
+				// no input, ask again
+				fmt.Printf("%s >> ", quiz)
 			}
-		}()
+		}(quiz)
 
 		select {
 		case input := <-inputCh:
