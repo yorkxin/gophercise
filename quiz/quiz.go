@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func check(err error) {
@@ -18,6 +19,7 @@ func check(err error) {
 
 func main() {
 	fileNamePtr := flag.String("csv", "problems.csv", "input file name")
+	limitPtr := flag.Uint("limit", 30, "time limit to answer one question")
 
 	flag.Parse()
 
@@ -28,9 +30,11 @@ func main() {
 	check(err)
 
 	csvReader := csv.NewReader(file)
+	timer := time.NewTimer(time.Duration(*limitPtr) * time.Second)
 
 	var questions, correct int
 
+problemsLoop:
 	for {
 		record, err := csvReader.Read()
 		if err == io.EOF {
@@ -47,14 +51,24 @@ func main() {
 
 		fmt.Printf("%s >> ", quiz)
 
-		inputReader := bufio.NewScanner(os.Stdin)
+		inputCh := make(chan string, 1)
 
-		if inputReader.Scan() {
-			input := inputReader.Text()
+		go func() {
+			inputReader := bufio.NewScanner(os.Stdin)
+			if inputReader.Scan() {
+				inputCh <- inputReader.Text()
+			}
+		}()
 
+		select {
+		case input := <-inputCh:
 			if input == ans {
 				correct++
 			}
+		case <-timer.C:
+			// timeout
+			fmt.Println()
+			break problemsLoop
 		}
 	}
 
