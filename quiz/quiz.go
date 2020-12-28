@@ -47,16 +47,16 @@ func main() {
 	var correct int
 
 problemsLoop:
-	for _, record := range problems {
+	for i, record := range problems {
 		// quiz you
 		quiz := record[0]
 		ans := record[1]
 
 		inputCh := make(chan string, 1)
 
-		go func(quiz string) {
+		go func(quizId int, quiz string) {
 			for {
-				fmt.Printf("%s >> ", quiz)
+				fmt.Printf("Quiz %d: %s >> ", quizId, quiz)
 				if inputReader.Scan() {
 					if input := strings.Trim(inputReader.Text(), " "); input != "" {
 						inputCh <- input
@@ -64,7 +64,7 @@ problemsLoop:
 					}
 				}
 			}
-		}(quiz)
+		}(i+1, quiz)
 
 		select {
 		case input := <-inputCh:
