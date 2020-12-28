@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -40,22 +39,16 @@ func main() {
 	}
 
 	csvReader := csv.NewReader(file)
+	problems, err := csvReader.ReadAll()
+	check(err)
+
 	timer := time.NewTimer(time.Duration(*limitPtr) * time.Second)
 
-	var questions, correct int
+	var correct int
 
 problemsLoop:
-	for {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		}
-
-		check(err)
-
+	for _, record := range problems {
 		// quiz you
-		questions++
-
 		quiz := record[0]
 		ans := record[1]
 
@@ -81,5 +74,5 @@ problemsLoop:
 		}
 	}
 
-	fmt.Println("You got", correct, "correct of total", questions, "questions.")
+	fmt.Println("You got", correct, "correct of total", len(problems), "questions.")
 }
