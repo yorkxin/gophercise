@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +42,12 @@ func main() {
 	csvReader := csv.NewReader(file)
 	problems, err := csvReader.ReadAll()
 	check(err)
+
+	rand.
+		New(rand.NewSource(time.Now().UnixNano())).
+		Shuffle(len(problems), func(i, j int) {
+			problems[i], problems[j] = problems[j], problems[i]
+		})
 
 	timer := time.NewTimer(time.Duration(*limitPtr) * time.Second)
 
