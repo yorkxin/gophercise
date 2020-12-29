@@ -33,8 +33,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
+	fmt.Println("Starting the server on 127.0.0.1:8080")
+	http.ListenAndServe("127.0.0.1:8080", yamlHandler)
 }
 
 func defaultMux() *http.ServeMux {
