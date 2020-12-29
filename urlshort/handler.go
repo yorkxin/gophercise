@@ -1,6 +1,7 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"net/http"
 
 	yaml "gopkg.in/yaml.v2"
@@ -46,6 +47,22 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	var list []redirectionEntry
 	if err := yaml.Unmarshal(yml, &list); err != nil {
+		return fallback.ServeHTTP, err
+	}
+
+	laMap := map[string]string{}
+
+	for _, entry := range list {
+		laMap[entry.Path] = entry.URL
+	}
+
+	return MapHandler(laMap, fallback), nil
+}
+
+// JSONHandler serves the same purpose of YAMLHandler, but reads from a JSON payload
+func JSONHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	var list []redirectionEntry
+	if err := json.Unmarshal(yml, &list); err != nil {
 		return fallback.ServeHTTP, err
 	}
 

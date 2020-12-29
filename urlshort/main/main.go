@@ -11,6 +11,7 @@ import (
 
 func main() {
 	yamlPathPtr := flag.String("yaml", "redirection.yml", "YAML file for redirection mapping")
+	jsonPathPtr := flag.String("json", "redirection.json", "JSON file for redirection mapping")
 	flag.Parse()
 
 	mux := defaultMux()
@@ -33,8 +34,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// reads from JSON file
+	json, err := ioutil.ReadFile(*jsonPathPtr)
+	if err != nil {
+		panic(err)
+	}
+
+	jsonHandler, err := urlshort.JSONHandler(json, yamlHandler)
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Starting the server on 127.0.0.1:8080")
-	http.ListenAndServe("127.0.0.1:8080", yamlHandler)
+	http.ListenAndServe("127.0.0.1:8080", jsonHandler)
 }
 
 func defaultMux() *http.ServeMux {

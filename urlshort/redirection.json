@@ -1,0 +1,11 @@
+[
+
+  {
+    "path": "/foo",
+    "url": "https://example.com/foo"
+  },
+  {
+    "path": "/bar",
+    "url": "https://example.com/bar"
+  }
+]
