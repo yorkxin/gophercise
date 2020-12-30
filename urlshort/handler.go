@@ -1,8 +1,11 @@
 package urlshort
 
 import (
+	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -73,4 +76,49 @@ func JSONHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	}
 
 	return MapHandler(laMap, fallback), nil
+}
+
+// DBHandler will return an http.HandlerFunc (which also
+// implements http.Handler) that will attempt to look up any
+// paths (keys in the db) to their corresponding URL (values
+// that each key in the db points to, in string format).
+// If the path is not provided in the map, then the fallback
+// http.Handler will be called instead.
+func DBHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stmt, err := db.Prepare("select url from urls where key = ?")
+
+		httpWriteError := func(err error) {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+
+		if err != nil {
+			httpWriteError(err)
+			return
+		}
+
+		defer stmt.Close()
+
+		name := strings.TrimPrefix(r.URL.Path, "/")
+		row := stmt.QueryRow(name)
+
+		if err != nil {
+			httpWriteError(err)
+			return
+		}
+
+		var url string
+		err = row.Scan(&url)
+
+		if err == sql.ErrNoRows {
+			log.Printf("No entry matches %q in db, fallback to default.", name)
+			fallback.ServeHTTP(w, r)
+		} else if err == nil {
+			http.Redirect(w, r, url, http.StatusFound)
+		} else {
+			httpWriteError(err)
+		}
+	}
 }

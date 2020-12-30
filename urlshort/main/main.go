@@ -1,27 +1,37 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"path/filepath"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/yorkxin/Gophercise/urlshort"
 )
 
 func main() {
+	dbPathPtr := flag.String("db", "db/db.sqlite3", "SQLite file for redirection mapping")
 	yamlPathPtr := flag.String("yaml", "redirection.yml", "YAML file for redirection mapping")
 	jsonPathPtr := flag.String("json", "redirection.json", "JSON file for redirection mapping")
 	flag.Parse()
 
 	mux := defaultMux()
 
-	// Build the MapHandler using the mux as the fallback
-	pathsToUrls := map[string]string{
-		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
-		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
+	// open db
+	dbPath, err := filepath.Abs(*dbPathPtr)
+	log.Println(dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		panic(err)
 	}
-	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
+	defer db.Close()
+
+
+	dbHandler := urlshort.DBHandler(db, mux)
 
 	// Build the YAMLHandler using the mapHandler as the
 	// fallback
@@ -30,7 +40,7 @@ func main() {
 		panic(err)
 	}
 
-	yamlHandler, err := urlshort.YAMLHandler(yaml, mapHandler)
+	yamlHandler, err := urlshort.YAMLHandler(yaml, dbHandler)
 	if err != nil {
 		panic(err)
 	}
