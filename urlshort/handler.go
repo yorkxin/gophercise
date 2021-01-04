@@ -3,8 +3,11 @@ package urlshort
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
@@ -78,24 +81,24 @@ func JSONHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 	return MapHandler(laMap, fallback), nil
 }
 
-// DBHandler will return an http.HandlerFunc (which also
+func httpWriteError(w http.ResponseWriter, err error) {
+	log.Println(err)
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte(err.Error()))
+}
+
+// DBRedirectHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to look up any
 // paths (keys in the db) to their corresponding URL (values
 // that each key in the db points to, in string format).
 // If the path is not provided in the map, then the fallback
 // http.Handler will be called instead.
-func DBHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
+func DBRedirectHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		stmt, err := db.Prepare("select url from urls where key = ?")
 
-		httpWriteError := func(err error) {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-		}
-
 		if err != nil {
-			httpWriteError(err)
+			httpWriteError(w, err)
 			return
 		}
 
@@ -105,7 +108,7 @@ func DBHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
 		row := stmt.QueryRow(name)
 
 		if err != nil {
-			httpWriteError(err)
+			httpWriteError(w, err)
 			return
 		}
 
@@ -118,7 +121,46 @@ func DBHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
 		} else if err == nil {
 			http.Redirect(w, r, url, http.StatusFound)
 		} else {
-			httpWriteError(err)
+			httpWriteError(w, err)
 		}
+	}
+}
+
+func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
+	insertStmt, err := db.Prepare("insert into urls(key, url) values(?, ?)")
+
+	if err != nil {
+		httpWriteError(w, err)
+		return
+	}
+
+	defer insertStmt.Close()
+
+	regexOfKey := regexp.MustCompile("^[a-z0-9_-]{5,20}$")
+
+	if err = r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Cannot Prase Request Body"))
+	}
+
+	key := r.Form.Get("key")
+	rawURL := r.Form.Get("url")
+
+	parsedURL, urlParseErr := url.Parse(rawURL)
+
+	if regexOfKey.MatchString(key) == false || urlParseErr != nil || parsedURL.IsAbs() == false {
+		errorMessage := fmt.Sprintf("Invalid key or url. key must match %v and url must be absolute", regexOfKey.String())
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(errorMessage))
+		return
+	}
+
+	_, err = insertStmt.Exec(key, rawURL)
+
+	if err != nil {
+		httpWriteError(w, err)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("OK"))
 	}
 }

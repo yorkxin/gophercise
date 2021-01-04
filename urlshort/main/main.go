@@ -30,8 +30,18 @@ func main() {
 	}
 	defer db.Close()
 
+	// POST /url
+	mux.HandleFunc("/url", func(rw http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			urlshort.DBCreateHandler(db, rw, *r)
+			return
+		} else {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("Not Found"))
+		}
+	})
 
-	dbHandler := urlshort.DBHandler(db, mux)
+	dbHandler := urlshort.DBRedirectHandler(db, mux)
 
 	// Build the YAMLHandler using the mapHandler as the
 	// fallback
