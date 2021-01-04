@@ -87,6 +87,46 @@ func httpWriteError(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
+func dbLookupRedirectKey(db *sql.DB, key string) (url *string, err error) {
+	stmt, err := db.Prepare("select url from urls where key = ?")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	row := stmt.QueryRow(key)
+	err = row.Scan(&url)
+
+	if err == sql.ErrNoRows {
+		// no row, okay
+		return nil, nil
+	} else if err == nil {
+		return url, err
+	} else {
+		// unhandled error from db
+		return nil, err
+	}
+}
+
+func dbInsertRedirection(db *sql.DB, key string, url string) (err error) {
+	stmt, err := db.Prepare("insert into urls(key, url) values(?, ?)")
+
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	if _, err = stmt.Exec(key, url); err != nil {
+		return err
+	} else {
+		// OK
+		return nil
+	}
+}
+
 // DBRedirectHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to look up any
 // paths (keys in the db) to their corresponding URL (values
@@ -95,50 +135,25 @@ func httpWriteError(w http.ResponseWriter, err error) {
 // http.Handler will be called instead.
 func DBRedirectHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stmt, err := db.Prepare("select url from urls where key = ?")
+		key := strings.TrimPrefix(r.URL.Path, "/")
+		url, err := dbLookupRedirectKey(db, key)
 
 		if err != nil {
 			httpWriteError(w, err)
 			return
-		}
-
-		defer stmt.Close()
-
-		name := strings.TrimPrefix(r.URL.Path, "/")
-		row := stmt.QueryRow(name)
-
-		if err != nil {
-			httpWriteError(w, err)
-			return
-		}
-
-		var url string
-		err = row.Scan(&url)
-
-		if err == sql.ErrNoRows {
-			log.Printf("No entry matches %q in db, fallback to default.", name)
+		} else if url == nil {
+			log.Printf("No entry matches %q in db, fallback to default.", key)
 			fallback.ServeHTTP(w, r)
-		} else if err == nil {
-			http.Redirect(w, r, url, http.StatusFound)
 		} else {
-			httpWriteError(w, err)
+			http.Redirect(w, r, *url, http.StatusFound)
 		}
 	}
 }
 
 func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
-	insertStmt, err := db.Prepare("insert into urls(key, url) values(?, ?)")
-
-	if err != nil {
-		httpWriteError(w, err)
-		return
-	}
-
-	defer insertStmt.Close()
-
 	regexOfKey := regexp.MustCompile("^[a-z0-9_-]{5,20}$")
 
-	if err = r.ParseForm(); err != nil {
+	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Cannot Prase Request Body"))
 	}
@@ -155,9 +170,7 @@ func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
 		return
 	}
 
-	_, err = insertStmt.Exec(key, rawURL)
-
-	if err != nil {
+	if err := dbInsertRedirection(db, key, rawURL); err != nil {
 		httpWriteError(w, err)
 	} else {
 		w.WriteHeader(http.StatusCreated)
