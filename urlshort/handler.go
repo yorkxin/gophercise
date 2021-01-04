@@ -166,6 +166,18 @@ func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
 	key := r.Form.Get("key")
 	rawURL := r.Form.Get("url")
 
+	existingUrl, err := dbLookupRedirectKey(db, key)
+	if err != nil {
+		httpWriteError(w, err)
+		return
+	}
+	if existingUrl != nil {
+		errorMessage := fmt.Sprintf("This key is unavailable for a new redirection: %q", key)
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.Write([]byte(errorMessage))
+		return
+	}
+
 	if !(regexp.MustCompile(urlKeyRegex).MatchString(key) && isValidURL(rawURL)) {
 		errorMessage := fmt.Sprintf("Invalid key or url. key must match %v and url must be absolute", urlKeyRegex)
 		w.WriteHeader(http.StatusUnprocessableEntity)
