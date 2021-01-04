@@ -18,6 +18,8 @@ type redirectionEntry struct {
 	URL  string `yaml:"url"`
 }
 
+const urlKeyRegex = "^[a-z0-9_-]{5,20}$"
+
 // MapHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to map any
 // paths (keys in the map) to their corresponding URL (values
@@ -127,6 +129,11 @@ func dbInsertRedirection(db *sql.DB, key string, url string) (err error) {
 	}
 }
 
+func isValidURL(rawURL string) bool {
+	parsedURL, urlParseErr := url.Parse(rawURL)
+	return urlParseErr == nil && parsedURL.IsAbs() == true
+}
+
 // DBRedirectHandler will return an http.HandlerFunc (which also
 // implements http.Handler) that will attempt to look up any
 // paths (keys in the db) to their corresponding URL (values
@@ -151,8 +158,6 @@ func DBRedirectHandler(db *sql.DB, fallback http.Handler) http.HandlerFunc {
 }
 
 func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
-	regexOfKey := regexp.MustCompile("^[a-z0-9_-]{5,20}$")
-
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Cannot Prase Request Body"))
@@ -161,10 +166,8 @@ func DBCreateHandler(db *sql.DB, w http.ResponseWriter, r http.Request) {
 	key := r.Form.Get("key")
 	rawURL := r.Form.Get("url")
 
-	parsedURL, urlParseErr := url.Parse(rawURL)
-
-	if regexOfKey.MatchString(key) == false || urlParseErr != nil || parsedURL.IsAbs() == false {
-		errorMessage := fmt.Sprintf("Invalid key or url. key must match %v and url must be absolute", regexOfKey.String())
+	if !(regexp.MustCompile(urlKeyRegex).MatchString(key) && isValidURL(rawURL)) {
+		errorMessage := fmt.Sprintf("Invalid key or url. key must match %v and url must be absolute", urlKeyRegex)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		w.Write([]byte(errorMessage))
 		return
