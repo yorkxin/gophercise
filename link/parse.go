@@ -21,18 +21,26 @@ func Parse(reader io.Reader) ([]Link, error) {
 		return nil, err
 	}
 
-	dfs(doc, "")
+	nodes := linkNodes(doc)
+
+	for _, node := range nodes {
+		fmt.Printf("%+v\n", node)
+	}
 	return nil, nil
 }
 
-func dfs(node *html.Node, padding string) {
-	msg := node.Data
-	if node.Type == html.ElementNode {
-		msg = "<" + msg + ">"
+// returns all <a> nodes under this node. If node itself is an <a>, it'll be
+// wrapped in a slice.
+func linkNodes(node *html.Node) []*html.Node {
+	if node.Type == html.ElementNode && node.Data == "a" {
+		return []*html.Node{node}
 	}
 
-	fmt.Println(padding, msg)
+	var childLinks []*html.Node
+
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		dfs(child, padding+"  ")
+		childLinks = append(childLinks, linkNodes(child)...)
 	}
+
+	return childLinks
 }
