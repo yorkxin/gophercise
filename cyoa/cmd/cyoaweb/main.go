@@ -26,7 +26,8 @@ func main() {
 		panic(err)
 	}
 
-	handler := cyoa.NewHandler(story, nil)
+	// myTemplate := template.Must(template.New("").Parse("Hi {{.Title}}"))
+	handler := cyoa.NewHandler(story)
 	address := fmt.Sprintf("localhost:%d", *port)
 	fmt.Println("Starting server at:", address)
 	log.Fatal(http.ListenAndServe(address, handler))

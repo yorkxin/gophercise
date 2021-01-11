@@ -69,12 +69,29 @@ func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	// success
 }
 
-// NewHandler returns an http.Handler for story navigation
-func NewHandler(story Story, htmlTemplate *template.Template) http.Handler {
-	if htmlTemplate == nil {
-		htmlTemplate = defaultTemplate
+// HandlerOption is a return type for functional options.
+//
+// NOTE: Expect the *storyHandler will be modified by functional options in place.
+type HandlerOption func(h *storyHandler)
+
+// WithTemplate allows the user to overide template
+func WithTemplate(myTemplate *template.Template) HandlerOption {
+	return func(h *storyHandler) {
+		h.template = myTemplate
 	}
-	return storyHandler{story: story, template: htmlTemplate}
+}
+
+// NewHandler returns an http.Handler for story navigation
+func NewHandler(story Story, options ...HandlerOption) http.Handler {
+	handler := storyHandler{story: story, template: defaultTemplate}
+
+	// "functional options" pattern
+	// See https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
+	for _, option := range options {
+		option(&handler)
+	}
+
+	return handler
 }
 
 // ParseStory parses the input IO as Story structure
