@@ -3,7 +3,55 @@ package cyoa
 import (
 	"encoding/json"
 	"io"
+	"net/http"
+	"text/template"
 )
+
+var html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choose Your Own Adventure!</title>
+</head>
+<body>
+  <h1>{{.Title}}</h1>
+
+  <article>
+    {{range .Paragraphs}}
+    <p>{{.}}</p>
+    {{end}}
+  </article>
+
+  <ul>
+    {{range .Options}}
+    <li><a href="/{{.Chapter}}">{{.Text}}</a></li>
+    {{end}}
+  </ul>
+</body>
+</html>`
+
+var tmpl *template.Template
+
+func init() {
+	tmpl = template.Must(template.New("").Parse(html))
+}
+
+type storyHandler struct {
+	story Story
+}
+
+func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	err := tmpl.Execute(writer, h.story["intro"])
+	if err != nil {
+		panic(err)
+	}
+}
+
+func NewHandler(story Story) http.Handler {
+	return storyHandler{story: story}
+}
 
 // ParseStory parses the input IO as Story structure
 func ParseStory(r io.Reader) (Story, error) {
