@@ -33,14 +33,15 @@ var html = `
 </body>
 </html>`
 
-var tmpl *template.Template
+var defaultTemplate *template.Template
 
 func init() {
-	tmpl = template.Must(template.New("").Parse(html))
+	defaultTemplate = template.Must(template.New("").Parse(html))
 }
 
 type storyHandler struct {
-	story Story
+	story    Story
+	template *template.Template
 }
 
 func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -61,7 +62,7 @@ func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	if err := tmpl.Execute(writer, chapter); err != nil {
+	if err := h.template.Execute(writer, chapter); err != nil {
 		http.Error(writer, "Something went wrong...", http.StatusInternalServerError)
 	}
 
@@ -69,8 +70,11 @@ func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 }
 
 // NewHandler returns an http.Handler for story navigation
-func NewHandler(story Story) http.Handler {
-	return storyHandler{story: story}
+func NewHandler(story Story, htmlTemplate *template.Template) http.Handler {
+	if htmlTemplate == nil {
+		htmlTemplate = defaultTemplate
+	}
+	return storyHandler{story: story, template: htmlTemplate}
 }
 
 // ParseStory parses the input IO as Story structure
