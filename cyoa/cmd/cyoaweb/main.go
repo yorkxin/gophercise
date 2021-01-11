@@ -35,9 +35,13 @@ func main() {
 		cyoa.WithTemplate(myTemplate),
 		cyoa.WithPathFunction(myPathFunc),
 	)
+
+	mux := http.NewServeMux()
+	mux.Handle("/story/", handler)
+
 	address := fmt.Sprintf("localhost:%d", *port)
 	fmt.Println("Starting server at:", address)
-	log.Fatal(http.ListenAndServe(address, handler))
+	log.Fatal(http.ListenAndServe(address, mux))
 }
 
 func myPathFunc(request *http.Request) string {
