@@ -22,18 +22,20 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	reqURL := resp.Request.URL
-	baseURL := &url.URL{
-		Scheme: reqURL.Scheme,
-		Host:   reqURL.Host,
-	}
-	base := baseURL.String()
-
+	base := resolveBaseURL(*resp.Request.URL)
 	hrefs := extractHrefs(resp.Body, base)
 
 	for _, href := range hrefs {
 		fmt.Println(href)
 	}
+}
+
+func resolveBaseURL(reqURL url.URL) string {
+	baseURL := &url.URL{
+		Scheme: reqURL.Scheme,
+		Host:   reqURL.Host,
+	}
+	return baseURL.String()
 }
 
 func extractHrefs(reader io.Reader, base string) []string {
