@@ -16,12 +16,17 @@ func main() {
 
 	hrefs := bfs(*urlFlag, 5)
 	for _, href := range hrefs {
-		fmt.Println(href)
+		fmt.Printf("%+v\n", href)
 	}
 }
 
-func bfs(urlToAccess string, maxDepth int) []string {
-	visited := make(map[string]bool) // true = visited; otherwise not visited
+type visitMeta struct {
+	url   string
+	depth int // depth of first discovery
+}
+
+func bfs(urlToAccess string, maxDepth int) []visitMeta {
+	visited := make(map[string]int) // number is depth
 
 	nextVisit := []string{urlToAccess}
 
@@ -32,12 +37,12 @@ func bfs(urlToAccess string, maxDepth int) []string {
 		for _, visitURL := range toVisit {
 			fmt.Printf("[D=%d] ", depth)
 
-			if visited[visitURL] == true {
+			if _, ok := visited[visitURL]; ok == true {
 				fmt.Printf("\x1b[34mskip\x1b[m : %s\n", visitURL)
 				continue
 			}
 			fmt.Printf("\x1b[1;32mvisit\x1b[m: %s\n", visitURL)
-			visited[visitURL] = true
+			visited[visitURL] = depth
 
 			nextVisit = append(nextVisit, getHrefsFromURL(visitURL)...)
 
@@ -46,9 +51,11 @@ func bfs(urlToAccess string, maxDepth int) []string {
 			}
 		}
 	}
-	allVisited := make([]string, 0, len(visited))
-	for visitedURL := range visited {
-		allVisited = append(allVisited, visitedURL)
+
+	// transform map to array
+	allVisited := make([]visitMeta, 0, len(visited))
+	for visitedURL, depth := range visited {
+		allVisited = append(allVisited, visitMeta{url: visitedURL, depth: depth})
 	}
 
 	return allVisited
