@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"text/template"
 )
 
@@ -43,12 +44,31 @@ type storyHandler struct {
 }
 
 func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	err := tmpl.Execute(writer, h.story["intro"])
-	if err != nil {
-		panic(err)
+	var storyName string
+	path := strings.Trim(request.URL.Path, " ")
+
+	if path == "" || path == "/" {
+		storyName = "intro"
+	} else {
+		// "/intro" => "intro"
+		storyName = path[1:]
 	}
+
+	chapter, found := h.story[storyName]
+
+	if !found {
+		http.Error(writer, "Chapter not found.", http.StatusNotFound)
+		return
+	}
+
+	if err := tmpl.Execute(writer, chapter); err != nil {
+		http.Error(writer, "Something went wrong...", http.StatusInternalServerError)
+	}
+
+	// success
 }
 
+// NewHandler returns an http.Handler for story navigation
 func NewHandler(story Story) http.Handler {
 	return storyHandler{story: story}
 }
