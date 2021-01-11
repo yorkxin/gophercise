@@ -14,8 +14,6 @@ import (
 func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "the URL you want to build sitemap for")
 
-	fmt.Println(*urlFlag)
-
 	hrefs := getHrefsFromURL(*urlFlag)
 	for _, href := range hrefs {
 		fmt.Println(href)
