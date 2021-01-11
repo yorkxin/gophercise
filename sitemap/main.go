@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
+	"net/url"
+	"strings"
+
+	"github.com/yorkxin/Gophercise/link"
 )
 
 func main() {
@@ -18,5 +20,25 @@ func main() {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	io.Copy(os.Stdout, resp.Body)
+
+	links, _ := link.Parse(resp.Body)
+	reqURL := resp.Request.URL
+	baseURL := &url.URL{
+		Scheme: reqURL.Scheme,
+		Host:   reqURL.Host,
+	}
+	base := baseURL.String()
+
+	var hrefs []string
+	for _, aLink := range links {
+		if strings.HasPrefix(aLink.Href, "/") {
+			hrefs = append(hrefs, base+aLink.Href)
+		} else if strings.HasPrefix(aLink.Href, "http") {
+			hrefs = append(hrefs, aLink.Href)
+		}
+	}
+
+	for _, href := range hrefs {
+		fmt.Println(href)
+	}
 }
