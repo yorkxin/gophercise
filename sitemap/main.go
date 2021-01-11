@@ -16,18 +16,21 @@ func main() {
 
 	fmt.Println(*urlFlag)
 
-	resp, err := http.Get(*urlFlag)
+	hrefs := getHrefsFromURL(*urlFlag)
+	for _, href := range hrefs {
+		fmt.Println(href)
+	}
+}
+
+func getHrefsFromURL(urlToAccess string) []string {
+	resp, err := http.Get(urlToAccess)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
 
 	base := resolveBaseURL(*resp.Request.URL)
-	hrefs := extractHrefs(resp.Body, base)
-
-	for _, href := range hrefs {
-		fmt.Println(href)
-	}
+	return extractHrefs(resp.Body, base)
 }
 
 func resolveBaseURL(reqURL url.URL) string {
