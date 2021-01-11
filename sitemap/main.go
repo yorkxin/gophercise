@@ -48,10 +48,10 @@ func bfs(urlToAccess string, maxDepth int) []visitMeta {
 			visited[visitURL] = depth
 
 			nextVisit = append(nextVisit, getHrefsFromURL(visitURL)...)
+		}
 
-			for _, newURL := range nextVisit {
-				fmt.Printf("   + %s\n", newURL)
-			}
+		for _, newURL := range nextVisit {
+			fmt.Printf("   + %s\n", newURL)
 		}
 	}
 
