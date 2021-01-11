@@ -30,7 +30,9 @@ func getHrefsFromURL(urlToAccess string) []string {
 	defer resp.Body.Close()
 
 	base := resolveBaseURL(*resp.Request.URL)
-	return extractHrefs(resp.Body, base)
+	return filter(extractHrefs(resp.Body, base), func(str string) bool {
+		return strings.HasPrefix(str, base)
+	})
 }
 
 func resolveBaseURL(reqURL url.URL) string {
@@ -54,4 +56,14 @@ func extractHrefs(reader io.Reader, base string) []string {
 	}
 
 	return hrefs
+}
+
+func filter(inputStrings []string, keepFunc func(string) bool) []string {
+	var result []string
+	for _, href := range inputStrings {
+		if keepFunc(href) {
+			result = append(result, href)
+		}
+	}
+	return result
 }
