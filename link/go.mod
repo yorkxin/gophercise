@@ -1,4 +1,4 @@
-module github.com/yorkxin/Gophersise/link
+module github.com/yorkxin/Gophercise/link
 
 go 1.15
 

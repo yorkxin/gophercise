@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yorkxin/Gophersise/link"
+	"github.com/yorkxin/Gophercise/link"
 )
 
 func main() {
