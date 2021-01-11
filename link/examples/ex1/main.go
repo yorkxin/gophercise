@@ -12,6 +12,9 @@ var exampleHTML = `
 <body>
   <h1>Hello!</h1>
   <a href="/other-page">A link to another page</a>
+  <a href="/another-page">Yet another link to
+	  <i>another</i>
+	page</a>
 </body>
 </html>`
 

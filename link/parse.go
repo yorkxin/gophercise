@@ -2,6 +2,7 @@ package link
 
 import (
 	"io"
+	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -41,8 +42,23 @@ func buildLink(node *html.Node) Link {
 		}
 	}
 
-	link.Text = "TODO: find link text"
+	link.Text = strings.Join(strings.Fields(extractText(node)), " ")
 	return link
+}
+
+func extractText(node *html.Node) string {
+	switch node.Type {
+	case html.TextNode:
+		return node.Data
+	case html.ElementNode:
+		var fullText string
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			fullText += extractText(child) + " "
+		}
+		return fullText
+	default:
+		return ""
+	}
 }
 
 // returns all <a> nodes under this node. If node itself is an <a>, it'll be
