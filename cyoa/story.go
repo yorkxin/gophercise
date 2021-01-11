@@ -1,5 +1,20 @@
 package cyoa
 
+import (
+	"encoding/json"
+	"io"
+)
+
+// ParseStory parses the input IO as Story structure
+func ParseStory(r io.Reader) (Story, error) {
+	d := json.NewDecoder(r)
+	var story Story
+	if err := d.Decode(&story); err != nil {
+		return nil, err
+	}
+	return story, nil
+}
+
 // Story is a collection of chapters and their handler
 type Story map[string]Chapter
 
