@@ -42,19 +42,11 @@ func init() {
 type storyHandler struct {
 	story    Story
 	template *template.Template
+	pathFn   func(*http.Request) string
 }
 
 func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	var storyName string
-	path := strings.Trim(request.URL.Path, " ")
-
-	if path == "" || path == "/" {
-		storyName = "intro"
-	} else {
-		// "/intro" => "intro"
-		storyName = path[1:]
-	}
-
+	storyName := h.pathFn(request)
 	chapter, found := h.story[storyName]
 
 	if !found {
@@ -69,6 +61,17 @@ func (h storyHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	// success
 }
 
+func defaultPathFn(request *http.Request) string {
+	path := strings.Trim(request.URL.Path, " ")
+
+	if path == "" || path == "/" {
+		return "intro"
+	}
+
+	// "/intro" => "intro"
+	return path[1:]
+}
+
 // HandlerOption is a return type for functional options.
 //
 // NOTE: Expect the *storyHandler will be modified by functional options in place.
@@ -81,9 +84,20 @@ func WithTemplate(myTemplate *template.Template) HandlerOption {
 	}
 }
 
+// WithPathFunction allows the user to overide path parsing function
+func WithPathFunction(myFunction func(*http.Request) string) HandlerOption {
+	return func(h *storyHandler) {
+		h.pathFn = myFunction
+	}
+}
+
 // NewHandler returns an http.Handler for story navigation
 func NewHandler(story Story, options ...HandlerOption) http.Handler {
-	handler := storyHandler{story: story, template: defaultTemplate}
+	handler := storyHandler{
+		story:    story,
+		template: defaultTemplate,
+		pathFn:   defaultPathFn,
+	}
 
 	// "functional options" pattern
 	// See https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis
