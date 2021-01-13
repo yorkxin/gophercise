@@ -1,15 +1,25 @@
 package main
 
 import (
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/yorkxin/Gophercise/link"
 )
+
+type loc struct {
+	URL string `xml:"loc"`
+}
+
+type urlset struct {
+	Urlset []loc `xml:"url"`
+}
 
 func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "the URL you want to build sitemap for")
@@ -18,9 +28,23 @@ func main() {
 	flag.Parse()
 
 	hrefs := bfs(*urlFlag, *depth)
-	for _, href := range hrefs {
-		fmt.Printf("%+v\n", href)
+
+	sitemap := urlset{
+		Urlset: make([]loc, len(hrefs)),
 	}
+
+	for i, href := range hrefs {
+		sitemap.Urlset[i] = loc{URL: href.url}
+	}
+
+	output := os.Stdout
+
+	encoder := xml.NewEncoder(output)
+	encoder.Indent("", "  ")
+	if err := encoder.Encode(sitemap); err != nil {
+		panic(err)
+	}
+	fmt.Fprintln(output)
 }
 
 type visitMeta struct {
