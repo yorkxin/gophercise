@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -27,10 +28,16 @@ type urlset struct {
 func main() {
 	urlFlag := flag.String("url", "https://gophercises.com", "the URL you want to build sitemap for")
 	depth := flag.Int("depth", 3, "the depth of URLs to visit")
+	debugMode := flag.Bool("debug", false, "set to true for debug mode")
 
 	flag.Parse()
 
-	hrefs := bfs(*urlFlag, *depth)
+	debugOutput := ioutil.Discard
+	if *debugMode == true {
+		debugOutput = os.Stderr
+	}
+
+	hrefs := bfs(*urlFlag, *depth, &debugOutput)
 
 	sitemap := urlset{
 		Urlset: make([]loc, len(hrefs)),
@@ -57,7 +64,7 @@ type visitMeta struct {
 	depth int // depth of first discovery
 }
 
-func bfs(urlToAccess string, maxDepth int) []visitMeta {
+func bfs(urlToAccess string, maxDepth int, debugOutput *io.Writer) []visitMeta {
 	visited := make(map[string]int) // number is depth
 
 	nextVisit := []string{urlToAccess}
@@ -67,21 +74,21 @@ func bfs(urlToAccess string, maxDepth int) []visitMeta {
 		nextVisit = make([]string, 0)
 
 		for _, visitURL := range toVisit {
-			fmt.Printf("[D=%d] ", depth)
+			fmt.Fprintf(*debugOutput, "[D=%d] ", depth)
 
 			if _, ok := visited[visitURL]; ok == true {
-				fmt.Printf("\x1b[34mskip\x1b[m : %s\n", visitURL)
+				fmt.Fprintf(*debugOutput, "\x1b[34mskip\x1b[m : %s\n", visitURL)
 				continue
 			}
-			fmt.Printf("\x1b[1;32mvisit\x1b[m: %s\n", visitURL)
+			fmt.Fprintf(*debugOutput, "\x1b[1;32mvisit\x1b[m: %s\n", visitURL)
 			visited[visitURL] = depth
 
 			for _, newURL := range getHrefsFromURL(visitURL) {
 				if _, ok := visited[newURL]; ok == false {
-					fmt.Printf("           + %s\n", newURL)
+					fmt.Fprintf(*debugOutput, "           + %s\n", newURL)
 					nextVisit = append(nextVisit, newURL)
 				} else {
-					fmt.Printf("           - %s\n", newURL)
+					fmt.Fprintf(*debugOutput, "           - %s\n", newURL)
 				}
 			}
 		}
