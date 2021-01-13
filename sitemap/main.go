@@ -13,12 +13,15 @@ import (
 	"github.com/yorkxin/Gophercise/link"
 )
 
+const sitemapNS = "http://www.sitemaps.org/schemas/sitemap/0.9"
+
 type loc struct {
 	URL string `xml:"loc"`
 }
 
 type urlset struct {
-	Urlset []loc `xml:"url"`
+	Urlset []loc  `xml:"url"`
+	Xmlns  string `xml:"xmlns,attr"`
 }
 
 func main() {
@@ -31,6 +34,7 @@ func main() {
 
 	sitemap := urlset{
 		Urlset: make([]loc, len(hrefs)),
+		Xmlns:  sitemapNS,
 	}
 
 	for i, href := range hrefs {
@@ -39,12 +43,13 @@ func main() {
 
 	output := os.Stdout
 
+	output.WriteString(xml.Header)
 	encoder := xml.NewEncoder(output)
 	encoder.Indent("", "  ")
 	if err := encoder.Encode(sitemap); err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(output)
+	output.WriteString("\n")
 }
 
 type visitMeta struct {
